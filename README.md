@@ -42,3 +42,17 @@ Log entries can be named using the *As methods:
 Named entries are always silenced, unless they've been enabled specifically, like so:
 
     l.Enable("debug")
+
+
+# Specified colors
+
+The package is compatible with the color specifications from
+github.com/fatih/color, which means that colors can be composed like this:
+
+    l.Say("Here are some composed colors...")
+    l.Say(
+    	"%s %s %s",
+    	color.RedString("red"),
+    	color.GreenString("green"),
+    	color.BlueString("blue"),
+    )
