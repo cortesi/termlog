@@ -1,6 +1,7 @@
 
-Termlog provides facilities for logging to a terminal geared towards
-interactive use.
+# termlog: Logging for interactive terminals
+
+![screenshot](demo/screenshot.png "termlog in action")
 
 # Basic usage
 
