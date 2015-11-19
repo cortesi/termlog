@@ -1,7 +1,9 @@
 
+[![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/cortesi/termlog)
+
 # termlog: Logging for interactive terminals
 
-![screenshot](demo/screenshot.png "termlog in action")
+![screenshot](_demo/screenshot.png "termlog in action")
 
 # Basic usage
 
