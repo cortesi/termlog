@@ -69,26 +69,28 @@ type line struct {
 type Log struct {
 	mu      sync.Mutex
 	Palette *Palette
+	TimeFmt string
 	enabled map[string]bool
 	quiet   bool
 }
 
-// NewLog creates a new Log instance
+// NewLog creates a new Log instance and initialises it with a set of defaults.
 func NewLog() *Log {
 	l := &Log{
 		Palette: &DefaultPalette,
 		enabled: make(map[string]bool),
+		TimeFmt: defaultTimeFmt,
 	}
 	l.enabled[""] = true
 	if !terminal.IsTerminal(int(os.Stdout.Fd())) {
-		l.NoColor()
+		l.Color(false)
 	}
 	return l
 }
 
-// NoColor disables colour output
-func (*Log) NoColor() {
-	color.NoColor = true
+// Color sets the state of colour output - true to turn on, false to disable.
+func (*Log) Color(state bool) {
+	color.NoColor = !state
 }
 
 // Enable logging for a specified name
@@ -117,7 +119,9 @@ func (l *Log) output(quiet bool, lines ...*line) {
 		}
 		var format string
 		if first {
-			l.Palette.Timestamp.Printf("%s", time.Now().Format(defaultTimeFmt))
+			l.Palette.Timestamp.Printf(
+				"%s", time.Now().Format(l.TimeFmt),
+			)
 			l.Palette.Say.Print(": ")
 			first = false
 			format = line.format + "\n"
