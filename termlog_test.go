@@ -66,11 +66,6 @@ func TestGroup(t *testing.T) {
 	g5 := l.Group()
 	g5.Done()
 
-	// Groups don't nest, but comply with the interface
-	g6 := l.Group()
-	g7 := g6.Group()
-	g7.Done()
-
 	g1.Say("g1 - say")
 	g2.Say("g2 - say")
 	g3.SayAs("on", "on - g2 - say")
@@ -108,10 +103,10 @@ func TestContext(t *testing.T) {
 	ctx := context.Background()
 	// Silenced log
 	e := FromContext(ctx)
-	e.Done()
+	e.Shout("nothing")
 
 	l := NewLog()
 	n := NewContext(ctx, l)
 	b := FromContext(n)
-	b.Done()
+	b.Shout("something")
 }

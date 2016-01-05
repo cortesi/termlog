@@ -52,10 +52,20 @@ type Logger interface {
 	NoticeAs(name string, format string, args ...interface{})
 	WarnAs(name string, format string, args ...interface{})
 	ShoutAs(name string, format string, args ...interface{})
+}
 
+// Group is a collected group of log entries
+type Group interface {
+	Logger
 	Done()
 	Quiet()
-	Group() Logger
+}
+
+// TermLog is the top-level termlog interface
+type TermLog interface {
+	Logger
+	Group() Group
+	Quiet()
 }
 
 type line struct {
@@ -172,8 +182,8 @@ func (l *Log) ShoutAs(name string, format string, args ...interface{}) {
 }
 
 // Group creates a new log group
-func (l *Log) Group() Logger {
-	return &Group{
+func (l *Log) Group() Group {
+	return &group{
 		palette: l.Palette,
 		lines:   make([]*line, 0),
 		log:     l,
@@ -181,85 +191,75 @@ func (l *Log) Group() Logger {
 	}
 }
 
-// Done is just a stub to comply with the Logger interface
-func (l *Log) Done() {
-
-}
-
 // Group is a group of lines that constitue a single log entry that won't be
 // split. Lines in a group are indented.
-type Group struct {
+type group struct {
 	palette *Palette
 	lines   []*line
 	log     *Log
 	quiet   bool
 }
 
-func (g *Group) addLine(name string, color *color.Color, format string, args []interface{}) {
+func (g *group) addLine(name string, color *color.Color, format string, args []interface{}) {
 	g.lines = append(g.lines, &line{name, color, format, args})
 }
 
 // Say logs a line
-func (g *Group) Say(format string, args ...interface{}) {
+func (g *group) Say(format string, args ...interface{}) {
 	g.addLine("", g.palette.Say, format, args)
 }
 
 // Notice logs a line with the Notice color
-func (g *Group) Notice(format string, args ...interface{}) {
+func (g *group) Notice(format string, args ...interface{}) {
 	g.addLine("", g.palette.Notice, format, args)
 }
 
 // Warn logs a line with the Warn color
-func (g *Group) Warn(format string, args ...interface{}) {
+func (g *group) Warn(format string, args ...interface{}) {
 	g.addLine("", g.palette.Warn, format, args)
 }
 
 // Shout logs a line with the Shout color
-func (g *Group) Shout(format string, args ...interface{}) {
+func (g *group) Shout(format string, args ...interface{}) {
 	g.addLine("", g.palette.Shout, format, args)
 }
 
 // SayAs logs a line
-func (g *Group) SayAs(name string, format string, args ...interface{}) {
+func (g *group) SayAs(name string, format string, args ...interface{}) {
 	g.addLine(name, g.palette.Say, format, args)
 }
 
 // NoticeAs logs a line with the Notice color
-func (g *Group) NoticeAs(name string, format string, args ...interface{}) {
+func (g *group) NoticeAs(name string, format string, args ...interface{}) {
 	g.addLine(name, g.palette.Notice, format, args)
 }
 
 // WarnAs logs a line with the Warn color
-func (g *Group) WarnAs(name string, format string, args ...interface{}) {
+func (g *group) WarnAs(name string, format string, args ...interface{}) {
 	g.addLine(name, g.palette.Warn, format, args)
 }
 
 // ShoutAs logs a line with the Shout color
-func (g *Group) ShoutAs(name string, format string, args ...interface{}) {
+func (g *group) ShoutAs(name string, format string, args ...interface{}) {
 	g.addLine(name, g.palette.Shout, format, args)
 }
 
 // Done outputs the group to screen
-func (g *Group) Done() {
+func (g *group) Done() {
 	g.log.output(g.quiet, g.lines...)
 }
 
 // Quiet disables output for this subgroup
-func (g *Group) Quiet() {
+func (g *group) Quiet() {
 	g.quiet = true
 }
 
-// Group of a group is just same group - groups don't nest
-func (g *Group) Group() Logger {
-	return g
-}
-
-// NewContext creates a new context with an included logger
+// NewContext creates a new context with an included Logger
 func NewContext(ctx context.Context, logger Logger) context.Context {
 	return context.WithValue(ctx, "termlog", logger)
 }
 
-// FromContext retrieves a logger from a context. If no logger is present, we
+// FromContext retrieves a Logger from a context. If no logger is present, we
 // return a new silenced logger that will produce no output.
 func FromContext(ctx context.Context) Logger {
 	logger, ok := ctx.Value("termlog").(Logger)
