@@ -22,6 +22,7 @@ func TestBasic(t *testing.T) {
 	buff := new(bytes.Buffer)
 	SetOutput(buff)
 	l := NewLog()
+	l.Color(false)
 	l.Enable("on")
 	l.Say("say")
 	l.Notice("notice")
@@ -44,6 +45,60 @@ func TestBasic(t *testing.T) {
 	tstring(t, buff, "on - notice")
 	tstring(t, buff, "on - warn")
 	tstring(t, buff, "on - shout")
+}
+
+func TestStream(t *testing.T) {
+	buff := new(bytes.Buffer)
+	SetOutput(buff)
+	l := NewLog()
+	l.Color(false)
+	s1 := l.Stream("header a")
+	s2 := l.Stream("header b")
+	if s1.(*stream).getID() == s2.(*stream).getID() {
+		t.Fail()
+	}
+
+	s1.Say("hello 1")
+	s1.Say("hello again")
+	tstring(t, buff, "header a")
+	tstring(t, buff, "hello 1")
+	tstring(t, buff, "hello again")
+	s2.Say("hello 2")
+	tstring(t, buff, "header b")
+	tstring(t, buff, "hello 2")
+
+	s1.SayAs("debug", "debug 1")
+	s2.Say("normal")
+	tstring(t, buff, "normal")
+
+	l.Enable("on")
+	s1.Say("say")
+	s1.Notice("notice")
+	s1.Warn("warn")
+	s1.Shout("shout")
+
+	// Not enabled
+	s1.SayAs("off", "off")
+	s1.SayAs("on", "on - say")
+	s1.NoticeAs("on", "on - notice")
+	s1.WarnAs("on", "on - warn")
+	s1.ShoutAs("on", "on - shout")
+
+	tstring(t, buff, "header a")
+	tstring(t, buff, "say")
+	tstring(t, buff, "notice")
+	tstring(t, buff, "warn")
+	tstring(t, buff, "shout")
+
+	tstring(t, buff, "on - say")
+	tstring(t, buff, "on - notice")
+	tstring(t, buff, "on - warn")
+	tstring(t, buff, "on - shout")
+
+	s2.Quiet()
+	s2.Say("foo")
+	s1.Say("bar")
+	tstring(t, buff, "bar")
 }
 
 func TestGroup(t *testing.T) {

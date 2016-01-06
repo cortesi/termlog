@@ -11,7 +11,6 @@ import (
 
 	"github.com/fatih/color"
 	"golang.org/x/crypto/ssh/terminal"
-	"golang.org/x/net/context"
 )
 
 const (
@@ -19,6 +18,7 @@ const (
 	notice
 	warn
 	shout
+	header
 )
 
 const defaultTimeFmt = "15:04:05: "
@@ -31,6 +31,7 @@ type Palette struct {
 	Notice    *color.Color
 	Warn      *color.Color
 	Shout     *color.Color
+	Header    *color.Color
 }
 
 // DefaultPalette is a sensbile default palette, with the following foreground
@@ -47,6 +48,7 @@ var DefaultPalette = Palette{
 	Warn:      color.New(color.FgYellow),
 	Shout:     color.New(color.FgRed),
 	Timestamp: color.New(color.FgCyan),
+	Header:    color.New(color.FgBlue),
 }
 
 // Logger logs things
@@ -70,16 +72,29 @@ type Group interface {
 	Quiet()
 }
 
+// Stream is a stream of log entries with a header
+type Stream interface {
+	Logger
+	Quiet()
+}
+
 // TermLog is the top-level termlog interface
 type TermLog interface {
 	Logger
 	Group() Group
+	Stream(header string) Stream
 	Quiet()
 }
 
+type linesource interface {
+	getID() string
+	getHeader() string
+}
+
 type line struct {
-	name string
-	str  string
+	name   string
+	str    string
+	source linesource
 }
 
 // Log is the top-level log structure
@@ -89,6 +104,7 @@ type Log struct {
 	TimeFmt string
 	enabled map[string]bool
 	quiet   bool
+	lastid  string
 }
 
 // NewLog creates a new Log instance and initialises it with a set of defaults.
@@ -123,6 +139,8 @@ func (l *Log) format(timestamp bool, level int, format string, args []interface{
 		p = l.Palette.Warn
 	case shout:
 		p = l.Palette.Shout
+	case header:
+		p = l.Palette.Header
 	default:
 		panic("unknown log level")
 	}
@@ -150,12 +168,15 @@ func (l *Log) output(quiet bool, lines ...*line) {
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if len(lines) == 0 {
-		return
-	}
 	for _, line := range lines {
 		if _, ok := l.enabled[line.name]; !ok {
 			continue
+		}
+		id := line.source.getID()
+		if id != "" && id != l.lastid {
+			l.lastid = id
+			hdr := l.format(true, header, line.source.getHeader(), nil)
+			fmt.Fprintf(color.Output, hdr+"\n")
 		}
 		fmt.Fprintf(color.Output, line.str+"\n")
 	}
@@ -163,69 +184,68 @@ func (l *Log) output(quiet bool, lines ...*line) {
 
 // Say logs a line
 func (l *Log) Say(format string, args ...interface{}) {
-	l.output(l.quiet, &line{"", l.format(true, say, format, args)})
+	l.output(l.quiet, &line{"", l.format(true, say, format, args), l})
 }
 
 // Notice logs a line with the Notice color
 func (l *Log) Notice(format string, args ...interface{}) {
-	l.output(l.quiet, &line{"", l.format(true, notice, format, args)})
+	l.output(l.quiet, &line{"", l.format(true, notice, format, args), l})
 }
 
 // Warn logs a line with the Warn color
 func (l *Log) Warn(format string, args ...interface{}) {
-	l.output(l.quiet, &line{"", l.format(true, warn, format, args)})
+	l.output(l.quiet, &line{"", l.format(true, warn, format, args), l})
 }
 
 // Shout logs a line with the Shout color
 func (l *Log) Shout(format string, args ...interface{}) {
-	l.output(l.quiet, &line{"", l.format(true, shout, format, args)})
+	l.output(l.quiet, &line{"", l.format(true, shout, format, args), l})
 }
 
 // SayAs logs a line
 func (l *Log) SayAs(name string, format string, args ...interface{}) {
-	l.output(l.quiet, &line{name, l.format(true, say, format, args)})
+	l.output(l.quiet, &line{name, l.format(true, say, format, args), l})
 }
 
 // NoticeAs logs a line with the Notice color
 func (l *Log) NoticeAs(name string, format string, args ...interface{}) {
-	l.output(l.quiet, &line{name, l.format(true, notice, format, args)})
+	l.output(l.quiet, &line{name, l.format(true, notice, format, args), l})
 }
 
 // WarnAs logs a line with the Warn color
 func (l *Log) WarnAs(name string, format string, args ...interface{}) {
-	l.output(l.quiet, &line{name, l.format(true, warn, format, args)})
+	l.output(l.quiet, &line{name, l.format(true, warn, format, args), l})
 }
 
 // ShoutAs logs a line with the Shout color
 func (l *Log) ShoutAs(name string, format string, args ...interface{}) {
-	l.output(l.quiet, &line{name, l.format(true, shout, format, args)})
+	l.output(l.quiet, &line{name, l.format(true, shout, format, args), l})
 }
 
 // Group creates a new log group
 func (l *Log) Group() Group {
 	return &group{
-		palette: l.Palette,
-		lines:   make([]*line, 0),
-		log:     l,
-		quiet:   l.quiet,
+		lines: make([]*line, 0),
+		log:   l,
+		quiet: l.quiet,
 	}
 }
 
-// NewContext creates a new context with an included Logger
-func NewContext(ctx context.Context, logger Logger) context.Context {
-	return context.WithValue(ctx, "termlog", logger)
+// Stream creates a new log group
+func (l *Log) Stream(header string) Stream {
+	return &stream{
+		header: header,
+		log:    l,
+		quiet:  l.quiet,
+	}
 }
 
-// FromContext retrieves a Logger from a context. If no logger is present, we
-// return a new silenced logger that will produce no output.
-func FromContext(ctx context.Context) Logger {
-	logger, ok := ctx.Value("termlog").(Logger)
-	if !ok {
-		l := NewLog()
-		l.Quiet()
-		return l
-	}
-	return logger
+func (l *Log) getID() string {
+	return ""
+}
+
+func (l *Log) getHeader() string {
+	return ""
 }
 
 // SetOutput sets the output writer for termlog (stdout by default).

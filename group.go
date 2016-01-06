@@ -3,10 +3,9 @@ package termlog
 // Group is a group of lines that constitue a single log entry that won't be
 // split. Lines in a group are indented.
 type group struct {
-	palette *Palette
-	lines   []*line
-	log     *Log
-	quiet   bool
+	lines []*line
+	quiet bool
+	log   *Log
 }
 
 func (g *group) addLine(name string, level int, format string, args []interface{}) {
@@ -18,7 +17,7 @@ func (g *group) addLine(name string, level int, format string, args []interface{
 	}
 	g.lines = append(
 		g.lines,
-		&line{name, g.log.format(ts, level, format, args)},
+		&line{name: name, str: g.log.format(ts, level, format, args), source: g},
 	)
 }
 
@@ -70,4 +69,12 @@ func (g *group) Done() {
 // Quiet disables output for this subgroup
 func (g *group) Quiet() {
 	g.quiet = true
+}
+
+func (g *group) getID() string {
+	return ""
+}
+
+func (g *group) getHeader() string {
+	return ""
 }
