@@ -76,6 +76,7 @@ type Group interface {
 type Stream interface {
 	Logger
 	Quiet()
+	Header()
 }
 
 // TermLog is the top-level termlog interface
@@ -162,6 +163,12 @@ func (l *Log) Quiet() {
 	l.quiet = true
 }
 
+func (l *Log) header(source linesource) {
+	l.lastid = source.getID()
+	hdr := l.format(true, header, source.getHeader(), nil)
+	fmt.Fprintf(color.Output, hdr+"\n")
+}
+
 func (l *Log) output(quiet bool, lines ...*line) {
 	if quiet {
 		return
@@ -174,9 +181,7 @@ func (l *Log) output(quiet bool, lines ...*line) {
 		}
 		id := line.source.getID()
 		if id != "" && id != l.lastid {
-			l.lastid = id
-			hdr := l.format(true, header, line.source.getHeader(), nil)
-			fmt.Fprintf(color.Output, hdr+"\n")
+			l.header(line.source)
 		}
 		fmt.Fprintf(color.Output, line.str+"\n")
 	}

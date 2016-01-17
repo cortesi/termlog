@@ -67,6 +67,13 @@ func (s *stream) Quiet() {
 	s.quiet = true
 }
 
+// Header immedately outputs the stream header
+func (s *stream) Header() {
+	s.log.mu.Lock()
+	defer s.log.mu.Unlock()
+	s.log.header(s)
+}
+
 func (s *stream) getID() string {
 	if s.id == "" {
 		s.id = rndstr(16)
