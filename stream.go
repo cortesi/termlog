@@ -70,8 +70,8 @@ func (s *stream) Quiet() {
 
 // Header immedately outputs the stream header
 func (s *stream) Header() {
-	s.log.mu.Lock()
-	defer s.log.mu.Unlock()
+	outputMutex.Lock()
+	defer outputMutex.Unlock()
 	s.log.header(s)
 }
 

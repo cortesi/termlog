@@ -24,6 +24,10 @@ const (
 const defaultTimeFmt = "15:04:05: "
 const indent = "  "
 
+// A single global output Mutex, because fatih/color has a single global output
+// writer
+var outputMutex = sync.Mutex{}
+
 // Palette defines the colour of output
 type Palette struct {
 	Timestamp *color.Color
@@ -100,7 +104,6 @@ type line struct {
 
 // Log is the top-level log structure
 type Log struct {
-	mu      sync.Mutex
 	Palette *Palette
 	TimeFmt string
 	enabled map[string]bool
@@ -173,8 +176,8 @@ func (l *Log) output(quiet bool, lines ...*line) {
 	if quiet {
 		return
 	}
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	outputMutex.Lock()
+	defer outputMutex.Unlock()
 	for _, line := range lines {
 		if _, ok := l.enabled[line.name]; !ok {
 			continue
