@@ -186,7 +186,7 @@ func (l *Log) output(quiet bool, lines ...*line) {
 		if id != "" && id != l.lastid {
 			l.header(line.source)
 		}
-		fmt.Fprintf(color.Output, line.str+"\n")
+		fmt.Fprintf(color.Output, "%s\n", line.str)
 	}
 }
 
