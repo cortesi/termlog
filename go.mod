@@ -1,6 +1,6 @@
 module github.com/cortesi/termlog
 
-go 1.12
+go 1.14
 
 require (
 	github.com/fatih/color v1.10.0
