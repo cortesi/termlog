@@ -2,7 +2,6 @@ package termlog
 
 import (
 	"math/rand"
-	"time"
 )
 
 type stream struct {
@@ -90,6 +89,3 @@ func (s *stream) getHeader() string {
 	return s.header
 }
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}

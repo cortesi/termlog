@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 const (
@@ -119,7 +119,7 @@ func NewLog() *Log {
 		TimeFmt: defaultTimeFmt,
 	}
 	l.enabled[""] = true
-	if !terminal.IsTerminal(int(os.Stdout.Fd())) || os.Getenv("TERM") == "dumb" {
+	if !term.IsTerminal(int(os.Stdout.Fd())) || os.Getenv("TERM") == "dumb" {
 		l.Color(false)
 	}
 	return l
